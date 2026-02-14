@@ -11,13 +11,21 @@ zinit light zsh-users/zsh-autosuggestions
 zinit light Aloxaf/fzf-tab
 
 # brew needs to add the paths
-eval "$(/opt/homebrew/bin/brew shellenv)"
+if command -v brew >/dev/null 2>&1; then
+  eval "$(brew shellenv)"
+elif [ -x /opt/homebrew/bin/brew ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x /usr/local/bin/brew ]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
 
 # pyenv (cached init for faster startup)
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH"
 export PYENV_SHELL=zsh
-source "$(brew --prefix pyenv)/completions/pyenv.zsh"
+if command -v brew >/dev/null 2>&1 && [ -f "$(brew --prefix pyenv)/completions/pyenv.zsh" ]; then
+  source "$(brew --prefix pyenv)/completions/pyenv.zsh"
+fi
 pyenv() {
   local command=${1:-}
   [ "$#" -gt 0 ] && shift
@@ -75,7 +83,8 @@ alias vim='nvim'
 alias c='clear'
 
 # path changes
-export PATH="$PATH:$(go env GOPATH)/bin"
+export GOPATH="${GOPATH:-$HOME/go}"
+export PATH="$PATH:$GOPATH/bin"
 export KUBECONFIG=~/.kube/config
 export TALOSCONFIG=~/.talos/config
 
