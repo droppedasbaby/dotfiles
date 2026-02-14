@@ -8,7 +8,6 @@ source "${ZINIT_HOME}/zinit.zsh"
 zinit light zsh-users/zsh-syntax-highlighting
 zinit light zsh-users/zsh-completions
 zinit light zsh-users/zsh-autosuggestions
-zinit light Aloxaf/fzf-tab
 
 # brew needs to add the paths
 if command -v brew >/dev/null 2>&1; then
@@ -19,24 +18,23 @@ elif [ -x /usr/local/bin/brew ]; then
   eval "$(/usr/local/bin/brew shellenv)"
 fi
 
-# pyenv (cached init for faster startup)
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH"
 export PYENV_SHELL=zsh
-if command -v brew >/dev/null 2>&1 && [ -f "$(brew --prefix pyenv)/completions/pyenv.zsh" ]; then
-  source "$(brew --prefix pyenv)/completions/pyenv.zsh"
-fi
+
+_pyenv_lazy_init() {
+  unset -f pyenv
+  eval "$(command pyenv init - zsh)"
+  if command -v brew >/dev/null 2>&1; then
+    local pyenv_comp
+    pyenv_comp="$(brew --prefix pyenv 2>/dev/null)/completions/pyenv.zsh"
+    [ -f "$pyenv_comp" ] && source "$pyenv_comp"
+  fi
+}
+
 pyenv() {
-  local command=${1:-}
-  [ "$#" -gt 0 ] && shift
-  case "$command" in
-  rehash|shell)
-    eval "$(command pyenv "sh-$command" "$@")"
-    ;;
-  *)
-    command pyenv "$command" "$@"
-    ;;
-  esac
+  _pyenv_lazy_init
+  pyenv "$@"
 }
 
 # history
@@ -59,12 +57,6 @@ zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 zstyle ':completion:*' menu select
 zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color $realpath'
 zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'ls --color $realpath'
-
-# snippets
-zinit snippet OMZP::command-not-found
-zinit snippet OMZP::dotenv
-zinit snippet OMZP::gitignore
-zinit snippet OMZP::sudo
 
 # Prompts for confirmation after 'rm *' etc.
 setopt RM_STAR_WAIT
