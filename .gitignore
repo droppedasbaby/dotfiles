@@ -1,0 +1,14 @@
+.DS_Store
+
+# tmux plugins (managed by TPM)
+.config/tmux/plugins/
+.tmux/plugins/
+
+# raycast extensions (managed by Raycast)
+.config/raycast/extensions/
+
+# gh CLI auth (user-specific, setup.sh handles login)
+.config/gh/hosts.yml
+
+# lock files
+Brewfile.lock.json
