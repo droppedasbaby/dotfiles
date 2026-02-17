@@ -64,17 +64,17 @@ return {
 
         -- UI
         require("mini.starter").setup()
-        require('mini.statusline').setup()
+        require("mini.statusline").setup()
         require("mini.icons").setup()
         require("mini.indentscope").setup()
         require("mini.extra").setup()
 
-	-- Sessions (auto-managed by cwd, see core/autocmds.lua)
-	require("mini.sessions").setup({
-	    autoread = false,
-	    autowrite = true,
-	    directory = vim.fn.stdpath("data") .. "/sessions",
-	})
+        -- Sessions (auto-managed by cwd, see core/autocmds.lua)
+        require("mini.sessions").setup({
+            autoread = false,
+            autowrite = true,
+            directory = vim.fn.stdpath("data") .. "/sessions",
+        })
 
         -- Text editing
         require("mini.comment").setup()
