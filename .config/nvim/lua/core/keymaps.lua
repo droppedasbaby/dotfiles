@@ -19,6 +19,13 @@ keymap("n", "<leader>fg", require("mini.pick").builtin.grep_live, { desc = "Live
 keymap("n", "<leader>fb", require("mini.pick").builtin.buffers, { desc = "Find buffers" })
 keymap("n", "<leader>fr", require("mini.pick").builtin.resume, { desc = "Resume last picker" })
 
+-- mini.sessions
+keymap("n", "<leader>fs", function() require("mini.sessions").select() end, { desc = "Select session" })
+keymap("n", "<leader>sw", function()
+    local name = vim.fn.input("Session name: ")
+    if name ~= "" then require("mini.sessions").write(name) end
+end, { desc = "Write session" })
+
 -- mini.extra
 keymap("n", "<leader>jl", function() require("mini.extra").pickers.list({ scope = 'jump' }) end, { desc = "Jump List Picker" })
 

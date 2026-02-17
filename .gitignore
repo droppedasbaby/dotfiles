@@ -1,5 +1,8 @@
 .DS_Store
 
+# Secrets
+.secrets
+
 # tmux plugins (managed by TPM)
 .config/tmux/plugins/
 .tmux/plugins/

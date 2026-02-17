@@ -71,6 +71,7 @@ zinit cdreplay -q
 alias ls='ls -glah'
 alias vim='nvim'
 alias c='clear'
+alias d='dev'
 
 # path changes
 export GOPATH="${GOPATH:-$HOME/go}"
@@ -83,3 +84,9 @@ eval "$(oh-my-posh init zsh --config ~/.config/ohmyposh/tokyonight_storm.omp.jso
 eval "$(fzf --zsh)" #fzf
 eval "$(zoxide init --cmd cd zsh)" #zoxide
 alias update='brew update && brew upgrade'
+
+# Dev session launcher
+source ~/.config/zsh/dev.zsh
+
+# Secrets (tokens, API keys — not checked into git)
+[ -f "$HOME/.dotfiles/.secrets" ] && source "$HOME/.dotfiles/.secrets"

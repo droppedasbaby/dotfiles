@@ -69,6 +69,13 @@ return {
         require("mini.indentscope").setup()
         require("mini.extra").setup()
 
+	-- Sessions (auto-managed by cwd, see core/autocmds.lua)
+	require("mini.sessions").setup({
+	    autoread = false,
+	    autowrite = true,
+	    directory = vim.fn.stdpath("data") .. "/sessions",
+	})
+
         -- Text editing
         require("mini.comment").setup()
         require("mini.pairs").setup()

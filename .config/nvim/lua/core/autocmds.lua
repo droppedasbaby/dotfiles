@@ -256,6 +256,52 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 -- =======================================================================
+-- SESSIONS (auto-managed by cwd via mini.sessions)
+-- =======================================================================
+local session_augroup = vim.api.nvim_create_augroup("AutoSessions", { clear = true })
+
+local function session_name_from_cwd()
+    return vim.fn.getcwd():gsub("/", "%%")
+end
+
+vim.api.nvim_create_autocmd("VimEnter", {
+    group = session_augroup,
+    nested = true,
+    callback = function()
+        -- Skip if nvim was opened with file args or stdin
+        if vim.fn.argc() > 0 then return end
+
+        local name = session_name_from_cwd()
+        local sessions = require("mini.sessions")
+        if sessions.detected[name] then
+            sessions.read(name, { verbose = false })
+        else
+            sessions.write(name, { verbose = false })
+        end
+
+        -- Session restore doesn't trigger BufRead events, so treesitter,
+        -- LSP, and other lazy-loaded plugins never attach. Re-edit all
+        -- buffers to replay the full event chain.
+        vim.schedule(function()
+            local current = vim.api.nvim_get_current_buf()
+            for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+                if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buflisted then
+                    local bufname = vim.api.nvim_buf_get_name(buf)
+                    if bufname ~= "" and vim.fn.filereadable(bufname) == 1 then
+                        vim.api.nvim_buf_call(buf, function()
+                            vim.cmd("edit")
+                        end)
+                    end
+                end
+            end
+            vim.api.nvim_set_current_buf(current)
+            vim.cmd.colorscheme("tokyonight-night")
+        end)
+    end,
+    desc = "Auto-load or create session based on cwd",
+})
+
+-- =======================================================================
 -- ADDITIONAL SETTINGS
 -- =======================================================================
 -- Decrease update time for better UX
