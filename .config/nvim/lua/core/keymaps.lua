@@ -11,13 +11,16 @@ keymap("i", "jj", "<ESC>", { desc = "Exit insert mode" })
 keymap("n", "<leader>nh", ":nohl<CR>", { desc = "Clear search highlights" })
 
 -- mini.files
-keymap("n", "<leader>e", require("mini.files").open, { desc = "Open file explorer" })
+keymap("n", "<leader>e", function() require("mini.files").open() end, { desc = "Open file explorer" })
 
 -- mini.pick
-keymap("n", "<leader>ff", require("mini.pick").builtin.files, { desc = "Find files" })
-keymap("n", "<leader>fg", require("mini.pick").builtin.grep_live, { desc = "Live grep" })
-keymap("n", "<leader>fb", require("mini.pick").builtin.buffers, { desc = "Find buffers" })
-keymap("n", "<leader>fr", require("mini.pick").builtin.resume, { desc = "Resume last picker" })
+keymap("n", "<leader>ff", function() require("mini.pick").builtin.files() end, { desc = "Find files" })
+keymap("n", "<leader>fg", function() require("mini.pick").builtin.grep_live() end, { desc = "Live grep" })
+keymap("n", "<leader>fb", function() require("mini.pick").builtin.buffers() end, { desc = "Find buffers" })
+keymap("n", "<leader>fr", function() require("mini.pick").builtin.resume() end, { desc = "Resume last picker" })
+
+-- mini.sessions
+keymap("n", "<leader>fs", function() require("mini.sessions").select() end, { desc = "Select session" })
 
 -- mini.sessions
 keymap("n", "<leader>fs", function() require("mini.sessions").select() end, { desc = "Select session" })
@@ -75,6 +78,13 @@ keymap("n", "<leader>5", function() harpoon:list():select(5) end, { desc = "Harp
 -- Navigate between harpooned files
 keymap("n", "<C-S-P>", function() harpoon:list():prev() end, { desc = "Previous harpoon file" })
 keymap("n", "<C-S-N>", function() harpoon:list():next() end, { desc = "Next harpoon file" })
+
+-- Git
+keymap("n", "<leader>ggb", function() require("mini.git").show_at_cursor() end, { desc = "Git: Show commit at cursor" })
+keymap("n", "<leader>ggd", "<cmd>DiffviewOpen HEAD<cr>",     { desc = "Git: Diff uncommitted changes" })
+keymap("n", "<leader>ggq", "<cmd>DiffviewClose<cr>",         { desc = "Git: Close diffview" })
+keymap("n", "<leader>ggf", "<cmd>DiffviewFileHistory %<cr>", { desc = "Git: File history (current)" })
+keymap("n", "<leader>ggl", "<cmd>DiffviewFileHistory<cr>",   { desc = "Git: Log (all files)" })
 
 -- Quality of Life
 keymap("v", "J", ":m '>+1<CR>gv=gv", { desc = "Move selected line down" })

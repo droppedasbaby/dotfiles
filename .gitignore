@@ -13,5 +13,16 @@
 # gh CLI auth (user-specific, setup.sh handles login)
 .config/gh/hosts.yml
 
+# local Claude settings
+.claude/settings.local.json
+
 # lock files
 Brewfile.lock.json
+
+# local runtime logs
+.nvimlog
+
+# machine-specific dev config lives outside dotfiles (for example ~/dev/configs)
+
+# machine-local secrets (tokens, API keys, env vars — sourced by .zshrc)
+.secrets

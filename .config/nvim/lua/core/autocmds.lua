@@ -26,7 +26,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         keymap('n', 'gr', vim.lsp.buf.references, opts('LSP: Show references'))
 
         keymap('n', 'K', function() vim.lsp.buf.hover({ border = 'rounded' }) end, opts('LSP: Hover documentation'))
-        keymap('n', '<C-k>', function() vim.lsp.buf.signature_help({ border = 'rounded' }) end, opts('LSP: Signature help'))
+        keymap('n', '<leader>lk', function() vim.lsp.buf.signature_help({ border = 'rounded' }) end, opts('LSP: Signature help'))
         keymap('i', '<C-k>', function() vim.lsp.buf.signature_help({ border = 'rounded' }) end, opts('LSP: Signature help'))
 
         -- ===================================================================
@@ -316,6 +316,28 @@ vim.api.nvim_create_autocmd("FileType", {
     end,
 })
 
+-- =======================================================================
+-- SESSIONS (auto per cwd, pipe-separated names)
+-- =======================================================================
+local function cwd_session_name()
+    return vim.fn.getcwd():gsub("[/\\]", " | "):gsub("^ | ", "")
+end
+
+vim.api.nvim_create_autocmd("VimEnter", {
+    nested = true,
+    callback = vim.schedule_wrap(function()
+        if vim.fn.argc() == 0 then
+            local ms = require("mini.sessions")
+            local name = cwd_session_name()
+            if ms.detected[name] then
+                ms.read(name)
+            else
+                ms.write(name)
+            end
+        end
+    end),
+})
+
 -- autosave on focus lost or buffer leave
 local autosave_timer = nil
 local delay = 2500 -- Debounce delay in milliseconds (2.5 second)
@@ -339,4 +361,3 @@ vim.api.nvim_create_autocmd({ "TextChanged", "InsertLeave", "FocusLost", "BufLea
     end,
     desc = "Debounced autosave on changes or leaving mode",
 })
-

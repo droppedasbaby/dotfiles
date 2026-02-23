@@ -2,6 +2,7 @@
 
 return {
     "echasnovski/mini.nvim",
+    lazy = false,
     config = function()
         -- Basics
         require("mini.basics").setup({
@@ -75,6 +76,10 @@ return {
             autowrite = true,
             directory = vim.fn.stdpath("data") .. "/sessions",
         })
+
+        -- Git
+        require("mini.diff").setup()
+        require("mini.git").setup()
 
         -- Text editing
         require("mini.comment").setup()
