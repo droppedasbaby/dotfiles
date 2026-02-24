@@ -81,6 +81,17 @@ return {
         require("mini.diff").setup()
         require("mini.git").setup()
 
+        -- Highlight patterns (TODO, FIXME, etc.)
+        local hipatterns = require("mini.hipatterns")
+        hipatterns.setup({
+            highlighters = {
+                fixme = { pattern = "%f[%w]()FIXME()%f[%W]", group = "MiniHipatternsFixme" },
+                hack  = { pattern = "%f[%w]()HACK()%f[%W]",  group = "MiniHipatternsHack" },
+                todo  = { pattern = "%f[%w]()TODO()%f[%W]",   group = "MiniHipatternsTodo" },
+                note  = { pattern = "%f[%w]()NOTE()%f[%W]",   group = "MiniHipatternsNote" },
+            },
+        })
+
         -- Text editing
         require("mini.comment").setup()
         require("mini.pairs").setup()

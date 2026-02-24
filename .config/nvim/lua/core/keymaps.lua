@@ -31,6 +31,8 @@ end, { desc = "Write session" })
 
 -- mini.extra
 keymap("n", "<leader>jl", function() require("mini.extra").pickers.list({ scope = 'jump' }) end, { desc = "Jump List Picker" })
+keymap("n", "<leader>ft", function() require("mini.extra").pickers.hipatterns() end, { desc = "Find TODOs/FIXMEs (buffer)" })
+keymap("n", "<leader>fT", function() require("mini.extra").pickers.hipatterns({ scope = "all" }) end, { desc = "Find TODOs/FIXMEs (all buffers)" })
 
 -- mini.completion
 keymap("i", "<Tab>", function()
