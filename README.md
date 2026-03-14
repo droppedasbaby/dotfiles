@@ -30,7 +30,7 @@ Custom tools loaded from `~/.config/shell/`. **These are in active development, 
 | `wt` | Git worktree manager with per-repo post-create hooks |
 | `sync-repos` | Batch-sync personal repos: fetch, rebase, commit, push with a secret guard |
 
-Each script has a usage header with flags and config vars. See `.secrets.example` for required environment variables.
+Each script has a usage header with flags and config vars. See `.secrets.zsh.example` for required environment variables.
 
 ## Fresh machine setup
 

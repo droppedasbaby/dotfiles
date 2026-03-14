@@ -1,7 +1,6 @@
 .DS_Store
 
 # Secrets
-.secrets
 .secrets.zsh
 
 # tmux plugins (managed by TPM)
@@ -26,4 +25,4 @@ Brewfile.lock.json
 # machine-specific dev config lives outside dotfiles (for example ~/dev/configs)
 
 # machine-local secrets (tokens, API keys, env vars — sourced by .zshrc)
-.secrets
+.secrets.zsh
