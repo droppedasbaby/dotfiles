@@ -1,3 +1,8 @@
+# Secrets (tokens, API keys — not checked into git)
+if [ -f "$HOME/.secrets.zsh" ]; then
+  source "$HOME/.secrets.zsh" || print -P "%F{red}[zshrc] failed to source .secrets.zsh%f" >&2
+fi
+
 # zinit download and load
 ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
 [ ! -d "$ZINIT_HOME" ] && mkdir -p "$(dirname "$ZINIT_HOME")"
@@ -127,11 +132,6 @@ done
 
 # Syntax Highlighting
 zinit light zsh-users/zsh-syntax-highlighting
-
-# Secrets (tokens, API keys — not checked into git)
-if [ -f "$HOME/.dotfiles/.secrets" ]; then
-  source "$HOME/.dotfiles/.secrets" || print -P "%F{red}[zshrc] failed to source .secrets%f" >&2
-fi
 
 # Warn if machine-local config dir is missing
 if [[ -n "${DEV_DIR:-}" && ! -d "$DEV_DIR/configs" ]]; then

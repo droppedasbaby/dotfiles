@@ -2,6 +2,7 @@
 
 # Secrets
 .secrets
+.secrets.zsh
 
 # tmux plugins (managed by TPM)
 .config/tmux/plugins/
