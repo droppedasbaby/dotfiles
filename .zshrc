@@ -20,31 +20,28 @@ zinit light Aloxaf/fzf-tab
 # snippets
 zinit snippet OMZP::command-not-found
 
-# brew needs to add the paths
-if command -v brew >/dev/null 2>&1; then
-  eval "$(brew shellenv)"
-elif [ -x /opt/homebrew/bin/brew ]; then
-  eval "$(/opt/homebrew/bin/brew shellenv)"
-elif [ -x /usr/local/bin/brew ]; then
-  eval "$(/usr/local/bin/brew shellenv)"
-fi
-
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH"
-export PYENV_SHELL=zsh
-
-_pyenv_lazy_init() {
-  unset -f pyenv
-  eval "$(command pyenv init - zsh)"
-  if command -v brew >/dev/null 2>&1; then
-    local pyenv_comp
-    pyenv_comp="$(brew --prefix pyenv 2>/dev/null)/completions/pyenv.zsh"
-    [ -f "$pyenv_comp" ] && source "$pyenv_comp"
+# brew shellenv — cached (regenerate: rm ~/.cache/zsh/brew.zsh)
+() {
+  local cache="$HOME/.cache/zsh/brew.zsh"
+  [[ -d "${cache:h}" ]] || mkdir -p "${cache:h}"
+  if [[ ! -f "$cache" ]]; then
+    local brew_bin
+    if command -v brew >/dev/null 2>&1; then brew_bin=brew
+    elif [[ -x /opt/homebrew/bin/brew ]]; then brew_bin=/opt/homebrew/bin/brew
+    elif [[ -x /usr/local/bin/brew ]]; then brew_bin=/usr/local/bin/brew
+    fi
+    [[ -n "$brew_bin" ]] && "$brew_bin" shellenv > "$cache" 2>/dev/null
   fi
+  [[ -f "$cache" ]] && source "$cache"
 }
 
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+export PATH="$PYENV_ROOT/shims:$PATH"
 pyenv() {
-  _pyenv_lazy_init
+  unfunction pyenv
+  eval "$(command pyenv init --path)"
+  eval "$(command pyenv init -)"
   pyenv "$@"
 }
 
@@ -87,18 +84,26 @@ setopt GLOB_DOTS
 autoload -U compinit && compinit
 zinit cdreplay -q
 
-# aliases
-if command -v gls >/dev/null 2>&1; then
-  alias ls="gls -glah --color=auto"
-elif [[ "$(uname)" == "Darwin" ]]; then
-  alias ls="ls -glah -G"
-else
-  alias ls="ls -glah --color=auto"
-fi
+# aliases — modern replacements
+alias ls="eza --icons --group-directories-first"
+alias ll="eza -lh --icons --group-directories-first"
+alias la="eza -lah --icons --group-directories-first"
+alias lt="eza -lah --icons --tree --level=2"
+alias cat="bat -pp"
+alias grep="rg"
+alias du="dust"
+alias diff="delta"
+alias top="htop"
+
+# shortcuts
 alias vim="nvim"
 alias n="nvim"
 alias c="clear"
 alias yolo="claude --dangerously-skip-permissions"
+
+# search everything (hidden + ignored)
+alias fdh="fd -H -I"
+alias rgh="rg --hidden --no-ignore"
 
 # path changes
 export GOPATH="${GOPATH:-$HOME/go}"
@@ -106,27 +111,50 @@ export PATH="$PATH:$GOPATH/bin"
 export KUBECONFIG=~/.kube/config
 export TALOSCONFIG=~/.talos/config
 
-# integrations
-if command -v oh-my-posh >/dev/null 2>&1; then
-  eval "$(oh-my-posh init zsh --config ~/.config/ohmyposh/tokyonight_storm_extra.omp.json)" \
-    || print -P "%F{red}[zshrc] oh-my-posh init failed%f" >&2
-else
-  print -P "%F{red}[zshrc] oh-my-posh not found — prompt will be unstyled%f" >&2
-fi
-if command -v fzf >/dev/null 2>&1; then
-  eval "$(fzf --zsh)" || print -P "%F{red}[zshrc] fzf init failed%f" >&2
-else
-  print -P "%F{red}[zshrc] fzf not found%f" >&2
-fi
-if command -v zoxide >/dev/null 2>&1; then
-  eval "$(zoxide init --cmd cd zsh)" || print -P "%F{red}[zshrc] zoxide init failed%f" >&2
-else
-  print -P "%F{red}[zshrc] zoxide not found%f" >&2
-fi
+# integrations — cached eval outputs (regenerate: rm ~/.cache/zsh/*)
+() {
+  local cache_dir="$HOME/.cache/zsh"
+  [[ -d "$cache_dir" ]] || mkdir -p "$cache_dir"
+
+  _cached_eval() {
+    local name=$1 bin=$2; shift 2
+    local cache="$cache_dir/$name.zsh"
+    local bin_path="${commands[$bin]:-}"
+    if [[ -z "$bin_path" ]]; then
+      print -P "%F{red}[zshrc] $bin not found%f" >&2; return 1
+    fi
+    if [[ ! -f "$cache" ]] || [[ "$bin_path" -nt "$cache" ]]; then
+      "$@" > "$cache" 2>/dev/null || { print -P "%F{red}[zshrc] $name init failed%f" >&2; return 1; }
+    fi
+    source "$cache"
+  }
+
+  # Pure zsh prompt — tokyonight storm colors, zero subprocesses
+  setopt PROMPT_SUBST
+  autoload -Uz vcs_info
+  zstyle ':vcs_info:*' enable git
+  zstyle ':vcs_info:git:*' formats '%b'
+  zstyle ':vcs_info:git:*' actionformats '%b|%a'
+
+  _prompt_precmd() {
+    vcs_info
+    local git_info=""
+    [[ -n "${vcs_info_msg_0_}" ]] && git_info=$' %F{#7dcfff}\ue725 '"${vcs_info_msg_0_}%f"
+    local py_info=""
+    [[ -n "$VIRTUAL_ENV" ]] && py_info=$' %F{#e0af68}\ue235 ['"${VIRTUAL_ENV:t}]%f"
+    PS1=$'%F{#7aa2f7}\u25b6%f %F{#bb9af7}%~%f'"${git_info}${py_info}"$'\n%F{#9ece6a}\u279c%f '
+  }
+  autoload -Uz add-zsh-hook
+  add-zsh-hook precmd _prompt_precmd
+
+  _cached_eval fzf fzf                fzf --zsh
+
+  unfunction _cached_eval
+}
 alias update="brew update && brew upgrade"
 
 # Shell functions (cc, ds, wt, _lib — from dotfiles)
-for f in ~/.config/shell/*.zsh(N); do
+for f in ~/.config/zsh/*.zsh(N); do
   [[ -f "$f" ]] && { source "$f" || print -P "%F{red}[zshrc] failed to source ${f:t}%f" >&2; }
 done
 
@@ -137,3 +165,14 @@ zinit light zsh-users/zsh-syntax-highlighting
 if [[ -n "${DEV_DIR:-}" && ! -d "$DEV_DIR/configs" ]]; then
   print -P "%F{yellow}[setup] \$DEV_DIR/configs not found — run: mkdir -p $DEV_DIR/configs/repo%f" >&2
 fi
+
+# zoxide — must be last (overrides cd)
+() {
+  local cache="$HOME/.cache/zsh/zoxide.zsh"
+  local bin_path="${commands[zoxide]:-}"
+  [[ -z "$bin_path" ]] && return
+  if [[ ! -f "$cache" ]] || [[ "$bin_path" -nt "$cache" ]]; then
+    zoxide init --cmd cd zsh > "$cache" 2>/dev/null || return
+  fi
+  source "$cache"
+}

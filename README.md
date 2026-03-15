@@ -2,7 +2,7 @@
 
 macOS dotfiles managed with [GNU Stow](https://www.gnu.org/software/stow/).
 
-> **Platform:** macOS only. Requires Homebrew. Tools like Ghostty, Raycast, and oh-my-posh are macOS-specific and have no Linux equivalents here.
+> **Platform:** macOS only. Requires Homebrew. Tools like Ghostty and Raycast are macOS-specific and have no Linux equivalents here.
 
 ## AFTER SETUP: Swap Caps Lock and Ctrl
 
@@ -12,7 +12,7 @@ System Settings > Keyboard > Keyboard Shortcuts > Modifier Keys
 
 ## What's included
 
-- **zsh** — zinit plugins, pyenv, oh-my-posh, fzf, zoxide
+- **zsh** — zinit plugins, pyenv, fzf, zoxide
 - **neovim** — lazy.nvim config with LSP, treesitter, harpoon, flash
 - **tmux** — TPM, tokyo-night theme, vim-tmux-navigator
 - **gh** — GitHub CLI config

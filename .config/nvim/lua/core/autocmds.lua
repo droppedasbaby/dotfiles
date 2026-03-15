@@ -261,7 +261,7 @@ vim.api.nvim_create_autocmd("FileType", {
 local session_augroup = vim.api.nvim_create_augroup("AutoSessions", { clear = true })
 
 local function session_name_from_cwd()
-    return vim.fn.getcwd():gsub("/", "%%")
+    return vim.fn.getcwd():gsub("[/\\]", " | "):gsub("^ | ", "")
 end
 
 vim.api.nvim_create_autocmd("VimEnter", {
@@ -314,28 +314,6 @@ vim.api.nvim_create_autocmd("FileType", {
         vim.opt_local.wrap = true
         vim.opt_local.linebreak = true -- break at words, not characters
     end,
-})
-
--- =======================================================================
--- SESSIONS (auto per cwd, pipe-separated names)
--- =======================================================================
-local function cwd_session_name()
-    return vim.fn.getcwd():gsub("[/\\]", " | "):gsub("^ | ", "")
-end
-
-vim.api.nvim_create_autocmd("VimEnter", {
-    nested = true,
-    callback = vim.schedule_wrap(function()
-        if vim.fn.argc() == 0 then
-            local ms = require("mini.sessions")
-            local name = cwd_session_name()
-            if ms.detected[name] then
-                ms.read(name)
-            else
-                ms.write(name)
-            end
-        end
-    end),
 })
 
 -- autosave on focus lost or buffer leave

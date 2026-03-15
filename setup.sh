@@ -39,10 +39,21 @@ if ! gh auth status &>/dev/null; then
 fi
 
 # Install TPM if not present
-if [ ! -d ~/.tmux/plugins/tpm ]; then
-	git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+TPM_DIR="$HOME/.config/tmux/plugins/tpm"
+if [ ! -d "$TPM_DIR" ]; then
+	git clone https://github.com/tmux-plugins/tpm "$TPM_DIR"
 fi
-~/.tmux/plugins/tpm/bin/install_plugins
+"$TPM_DIR/bin/install_plugins"
+
+# Create logs directory for sync-repos
+mkdir -p "$HOME/dev/.logs"
+
+# Install cron job for nightly repo sync (idempotent)
+CRON_CMD="55 23 * * * $HOME/.config/scripts/sync-repos.sh >> $HOME/dev/.logs/sync-\$(date +\\%Y\\%m\\%d).log 2>&1"
+if ! crontab -l 2>/dev/null | grep -qF 'sync-repos.sh'; then
+	(crontab -l 2>/dev/null; echo "# Sync dev repos daily at 11:55 PM"; echo "$CRON_CMD") | crontab -
+	echo "Installed nightly sync-repos cron job"
+fi
 
 # macOS defaults
 defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false

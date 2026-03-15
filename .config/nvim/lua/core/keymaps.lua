@@ -21,9 +21,6 @@ keymap("n", "<leader>fr", function() require("mini.pick").builtin.resume() end, 
 
 -- mini.sessions
 keymap("n", "<leader>fs", function() require("mini.sessions").select() end, { desc = "Select session" })
-
--- mini.sessions
-keymap("n", "<leader>fs", function() require("mini.sessions").select() end, { desc = "Select session" })
 keymap("n", "<leader>sw", function()
     local name = vim.fn.input("Session name: ")
     if name ~= "" then require("mini.sessions").write(name) end
