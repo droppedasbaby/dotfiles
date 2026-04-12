@@ -12,7 +12,7 @@
 # Dependencies: sudo (for /etc/hosts edits)
 
 _block_config="${CONFIGS_DIR:-$DEV_DIR/configs}/block/domains.txt"
-_block_state="$HOME/.siteblock_lock"
+_block_state="$HOME/.local/state/block/lock"
 _block_hosts="/etc/hosts"
 _block_start="########## BLOCKED:START ##########"
 _block_end="########## BLOCKED:END ##########"
@@ -142,6 +142,7 @@ function block() {
       local seconds
       seconds=$(_block_parse_duration "$cmd") || return 1
       _block_apply || return 1
+      mkdir -p "${_block_state:h}"
       echo $(( $(date +%s) + seconds )) > "$_block_state"
       _block_flush_dns
       echo "Blocked for $cmd."
