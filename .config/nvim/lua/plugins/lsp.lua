@@ -11,7 +11,6 @@ return {
         local servers = {
             -- Essentials
             "lua_ls",
-            "vimls",
 
             -- Programming Languages
             "clangd",
@@ -46,15 +45,11 @@ return {
 
         require("mason-lspconfig").setup({
             ensure_installed = servers,
-            automatic_installation = true,
             handlers = {
                 -- Default handler for all servers
                 function(server_name)
                     require("lspconfig")[server_name].setup({
                         capabilities = capabilities,
-                        flags = {
-                            debounce_text_changes = 150,
-                        },
                     })
                 end,
                 -- lua_ls: tell it about neovim's vim global

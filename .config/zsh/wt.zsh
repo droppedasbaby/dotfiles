@@ -3,7 +3,7 @@
 # Usage:
 #   wt                                    fzf picker of all worktrees
 #   wt <repo> <branch> [--no-hooks]       create/enter worktree
-#   wt <repo> <branch> --remove
+#   wt <repo> <branch> --remove [--force]
 #
 # Env vars (required):
 #   DEV_DIR              Root of your projects — see _lib.zsh
@@ -53,6 +53,7 @@ Options:
   --no-sync    Skip fetch + rebase on existing worktrees
   --name       Custom worktree directory name (instead of <repo>-<suffix>)
   --remove     Remove a worktree (offers to delete branch too)
+  --force, -f  Force remove even with untracked/modified files
 
 Environment:
   DEV_DIR              Parent directory of your repos.
@@ -123,12 +124,14 @@ function wt() {
   local custom_name=""
   local sync=true
   local do_remove=false
+  local do_force=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --no-hooks)  build=false ;;
       --no-sync)   sync=false ;;
       --remove)    do_remove=true ;;
+      --force|-f)  do_force=true ;;
       --name)
         shift
         [[ $# -eq 0 ]] && { echo "ERROR: --name requires a value"; return 1; }
@@ -177,7 +180,9 @@ function wt() {
       return 1
     fi
     echo "==> Removing worktree: $worktree_dir"
-    if git -C "$repo_dir" worktree remove "$worktree_dir"; then
+    local remove_args=("$worktree_dir")
+    $do_force && remove_args=(--force "$worktree_dir")
+    if git -C "$repo_dir" worktree remove "${remove_args[@]}"; then
       echo "    Removed."
       local session_name="${worktree_dir#$HOME/}"
       session_name="${session_name//\//" | "}"
@@ -197,7 +202,7 @@ function wt() {
       fi
     else
       echo "ERROR: Failed to remove worktree (uncommitted changes?)"
-      echo "  Force with:  git -C $repo_dir worktree remove --force $worktree_dir"
+      echo "  Retry with:  wt $repo_name ${branch##*/} --remove --force"
       return 1
     fi
     return 0
@@ -269,6 +274,8 @@ function wt() {
       if ! git -C "$repo_dir" worktree add -b "$branch" "$worktree_dir" "$base_ref" 2>&1; then
         return 1
       fi
+      echo "==> Pushing branch to origin and setting upstream..."
+      git -C "$worktree_dir" push -u origin "$branch" 2>&1
     fi
   fi
 

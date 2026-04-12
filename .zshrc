@@ -85,7 +85,7 @@ autoload -U compinit && compinit
 zinit cdreplay -q
 
 # aliases — modern replacements
-alias ls="eza --icons --group-directories-first"
+alias ls="eza -lah --icons --group-directories-first"
 alias ll="eza -lh --icons --group-directories-first"
 alias la="eza -lah --icons --group-directories-first"
 alias lt="eza -lah --icons --tree --level=2"

@@ -54,8 +54,15 @@ _cc_collect_claude() {
       sid = $1; proj = $2; ts = $3 + 0; msg = $4
       if (sid == "" || ts <= 0) next
       if (ts > max_ts[sid]) max_ts[sid] = ts
+      if (msg == "" || substr(msg,1,1) == "<" || substr(msg,1,1) == "{" || substr(msg,1,1) == "/" || substr(msg,1,1) == ":") next
+      kw = msg
+      if (length(kw) > 60) kw = substr(kw, 1, 60)
+      if (sid in all_kw) {
+        if (length(all_kw[sid]) < 300) all_kw[sid] = all_kw[sid] " " kw
+      } else {
+        all_kw[sid] = kw
+      }
       if (sid in first_msg) next
-      if (msg == "" || substr(msg,1,1) == "<" || substr(msg,1,1) == "{" || substr(msg,1,1) == "/") next
       if (length(msg) > 80) msg = substr(msg, 1, 77) "..."
       if (proj == "") proj = "__NO_CWD__"
       first_proj[sid] = proj
@@ -63,7 +70,9 @@ _cc_collect_claude() {
     }
     END {
       for (sid in first_msg) {
-        printf "%d\tclaude\t%s\t%s\t%s\n", max_ts[sid], sid, first_proj[sid], first_msg[sid]
+        kw = (sid in all_kw) ? all_kw[sid] : ""
+        gsub(/\t/, " ", kw)
+        printf "%d\tclaude\t%s\t%s\t%s\t%s\n", max_ts[sid], sid, first_proj[sid], first_msg[sid], kw
       }
     }
   '
@@ -86,14 +95,23 @@ _cc_collect_codex() {
       sid = $1; ts = $2 + 0; msg = $3
       if (sid == "" || ts <= 0) next
       if (ts > max_ts[sid]) max_ts[sid] = ts
+      if (msg == "" || substr(msg,1,1) == "<" || substr(msg,1,1) == "{" || substr(msg,1,1) == "/" || substr(msg,1,1) == ":") next
+      kw = msg
+      if (length(kw) > 60) kw = substr(kw, 1, 60)
+      if (sid in all_kw) {
+        if (length(all_kw[sid]) < 300) all_kw[sid] = all_kw[sid] " " kw
+      } else {
+        all_kw[sid] = kw
+      }
       if (sid in first_msg) next
-      if (msg == "" || substr(msg,1,1) == "<" || substr(msg,1,1) == "{" || substr(msg,1,1) == "/") next
       if (length(msg) > 80) msg = substr(msg, 1, 77) "..."
       first_msg[sid] = msg
     }
     END {
       for (sid in first_msg) {
-        printf "%d\tcodex\t%s\t__NO_CWD__\t%s\n", max_ts[sid], sid, first_msg[sid]
+        kw = (sid in all_kw) ? all_kw[sid] : ""
+        gsub(/\t/, " ", kw)
+        printf "%d\tcodex\t%s\t__NO_CWD__\t%s\t%s\n", max_ts[sid], sid, first_msg[sid], kw
       }
     }
   '
@@ -112,7 +130,7 @@ _cc_list_sessions() {
     _cc_collect_claude &
     _cc_collect_codex &
     wait
-  } | sort -t$'\t' -k1,1rn | while IFS=$'\t' read -r epoch provider sid ppath summary; do
+  } | sort -t$'\t' -k1,1rn | while IFS=$'\t' read -r epoch provider sid ppath summary keywords; do
     [[ -z "$sid" ]] && continue
 
     [[ "$ppath" == "__NO_CWD__" ]] && ppath=""
@@ -145,8 +163,8 @@ _cc_list_sessions() {
 
     # Visible columns are space-padded into a single tab field so fzf
     # renders them at fixed widths (tabs have unpredictable stop positions).
-    printf '%s\t%s\t%s\t%-11s  %-8s  %-25s  %s\n' \
-      "$provider" "$sid" "$ppath" "$date_str" "$provider" "$label" "$summary"
+    printf '%s\t%s\t%s\t%-11s  %-8s  %-25s  %s\t%s\n' \
+      "$provider" "$sid" "$ppath" "$date_str" "$provider" "$label" "$summary" "$keywords"
   done
 }
 
@@ -179,9 +197,9 @@ function cc() {
   local pick
   pick=$(_cc_list_sessions "$scope" "$max_age" \
     | fzf --height 100% --reverse --prompt="cc: " \
-           --no-sort \
+           --tiebreak=index \
            --query="$query" \
-           --with-nth=4.. \
+           --with-nth=4 \
            --delimiter=$'\t' \
            --header="$hdr" \
            --preview-window=hidden)

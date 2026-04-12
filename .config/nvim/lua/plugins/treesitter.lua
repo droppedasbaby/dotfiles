@@ -1,101 +1,51 @@
 -- lua/plugins/treesitter.lua
 
 return {
-    "nvim-treesitter/nvim-treesitter",
-    event = { "BufReadPre", "BufNewFile" },
-    build = ":TSUpdate",
-    dependencies = {
-        "nvim-treesitter/nvim-treesitter-textobjects",
+    {
+        "nvim-treesitter/nvim-treesitter",
+        event = { "BufReadPre", "BufNewFile" },
+        build = ":TSUpdate",
+        config = function()
+            vim.treesitter.language.register("bash", "zsh")
+        end,
     },
-    config = function()
-        require("nvim-treesitter.configs").setup({
-            ensure_installed = {
-                -- Essential for Neovim
-                "lua", "vim", "vimdoc", "query",
+    {
+        "nvim-treesitter/nvim-treesitter-textobjects",
+        event = { "BufReadPre", "BufNewFile" },
+        dependencies = { "nvim-treesitter/nvim-treesitter" },
+        config = function()
+            require("nvim-treesitter-textobjects").setup({
+                select = { lookahead = true },
+                move = { set_jumps = true },
+            })
 
-                -- Programming Languages
-                "c",          -- .c, .h
-                "cpp",        -- .cc, .h
-                "go",         -- .go
-                "gomod",      -- go.mod
-                "gosum",      -- go.sum
-                "java",       -- .java
-                "javascript", -- .js
-                "typescript", -- .ts
-                "python",     -- .py, .pyi
-                "rust",       -- .rs
-                -- Shell/Scripting
-                "bash",   -- .sh, .bash, .zsh (zsh uses bash parser)
+            local select = require("nvim-treesitter-textobjects.select")
+            local move = require("nvim-treesitter-textobjects.move")
+            local swap = require("nvim-treesitter-textobjects.swap")
 
-                -- Config/Data Formats
-                "json", -- .json
-                "yaml", -- .yaml, .yml
-                "toml", -- .toml
-                "xml",  -- .xml
-                "csv",  -- .csv
-                "ini",  -- .ini, .cfg, .conf
-                "hcl",  -- .hcl, .tf, .tfvars (Terraform)
-                -- Documentation
-                "markdown",        -- .md
-                "markdown_inline", -- for markdown code blocks
+            -- Select
+            for _, m in ipairs({
+                { "af", "@function.outer" },
+                { "if", "@function.inner" },
+                { "ac", "@class.outer" },
+                { "ic", "@class.inner" },
+                { "aa", "@parameter.outer" },
+                { "ia", "@parameter.inner" },
+            }) do
+                vim.keymap.set({ "x", "o" }, m[1], function()
+                    select.select_textobject(m[2], "textobjects")
+                end)
+            end
 
-                -- Web
-                "html", -- .html
-                "css",  -- .css
+            -- Move
+            vim.keymap.set({ "n", "x", "o" }, "]f", function() move.goto_next_start("@function.outer", "textobjects") end)
+            vim.keymap.set({ "n", "x", "o" }, "]c", function() move.goto_next_start("@class.outer", "textobjects") end)
+            vim.keymap.set({ "n", "x", "o" }, "[f", function() move.goto_previous_start("@function.outer", "textobjects") end)
+            vim.keymap.set({ "n", "x", "o" }, "[c", function() move.goto_previous_start("@class.outer", "textobjects") end)
 
-                -- Infrastructure/DevOps
-                "dockerfile", -- .dockerfile, Dockerfile
-                "terraform",  -- .tf (alias for hcl)
-                "proto",      -- .proto
-
-            },
-            auto_install = true,
-            highlight = { enable = true },
-            indent = { enable = true },
-            -- Incremental selection (built into treesitter core)
-            incremental_selection = {
-                enable = true,
-                keymaps = {
-                    init_selection = "<C-space>",
-                    node_incremental = "<C-space>",
-                    node_decremental = "<bs>",
-                },
-            },
-            textobjects = {
-                select = {
-                    enable = true,
-                    lookahead = true,
-                    keymaps = {
-                        ["af"] = "@function.outer",
-                        ["if"] = "@function.inner",
-                        ["ac"] = "@class.outer",
-                        ["ic"] = "@class.inner",
-                        ["aa"] = "@parameter.outer",
-                        ["ia"] = "@parameter.inner",
-                    },
-                },
-                move = {
-                    enable = true,
-                    set_jumps = true,
-                    goto_next_start = {
-                        ["]f"] = "@function.outer",
-                        ["]c"] = "@class.outer",
-                    },
-                    goto_previous_start = {
-                        ["[f"] = "@function.outer",
-                        ["[c"] = "@class.outer",
-                    },
-                },
-                swap = {
-                    enable = true,
-                    swap_next = {
-                        ["<leader>ts"] = "@parameter.inner",
-                    },
-                    swap_previous = {
-                        ["<leader>tS"] = "@parameter.inner",
-                    },
-                },
-            },
-        })
-    end,
+            -- Swap
+            vim.keymap.set("n", "<leader>ts", function() swap.swap_next("@parameter.inner") end)
+            vim.keymap.set("n", "<leader>tS", function() swap.swap_previous("@parameter.inner") end)
+        end,
+    },
 }

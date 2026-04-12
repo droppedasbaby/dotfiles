@@ -35,7 +35,7 @@ vim.opt.completeopt = "menu,menuone,noselect"
 
 -- Treesitter-based folding
 vim.opt.foldmethod = "expr"
-vim.opt.foldexpr = "nvim_treesitter#foldexpr()"
+vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
 vim.opt.foldenable = false         -- Don't fold by default
 vim.opt.foldlevel = 99             -- But keep high fold level
 

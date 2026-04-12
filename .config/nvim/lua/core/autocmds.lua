@@ -8,9 +8,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
         local bufnr = args.buf
         local client = vim.lsp.get_client_by_id(args.data.client_id)
 
-        -- Enable completion triggered by <c-x><c-o>
-        vim.bo[bufnr].omnifunc = 'v:lua.vim.lsp.omnifunc'
-
         local keymap = vim.keymap.set
         local opts = function(desc)
             return { noremap = true, silent = true, buffer = bufnr, desc = desc }
@@ -28,6 +25,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
         keymap('n', 'K', function() vim.lsp.buf.hover({ border = 'rounded' }) end, opts('LSP: Hover documentation'))
         keymap('n', '<leader>lk', function() vim.lsp.buf.signature_help({ border = 'rounded' }) end, opts('LSP: Signature help'))
         keymap('i', '<C-k>', function() vim.lsp.buf.signature_help({ border = 'rounded' }) end, opts('LSP: Signature help'))
+
+        vim.lsp.completion.enable(true, args.data.client_id, bufnr, { autotrigger = true })
 
         -- ===================================================================
         -- LSP: Code Actions & Refactoring
@@ -53,25 +52,15 @@ vim.api.nvim_create_autocmd("LspAttach", {
         -- ===================================================================
         -- LSP: Code Lens
         -- ===================================================================
-        if client and client.supports_method('textDocument/codeLens') then
-            if vim.lsp.codelens then
-                keymap('n', '<leader>cl', vim.lsp.codelens.run, opts('LSP: Run code lens'))
-                keymap('n', '<leader>cL', vim.lsp.codelens.refresh, opts('LSP: Refresh code lens'))
-
-                -- Auto-refresh code lens on buffer changes
-                vim.api.nvim_create_autocmd({ 'BufEnter', 'CursorHold', 'InsertLeave' }, {
-                    buffer = bufnr,
-                    callback = vim.lsp.codelens.refresh,
-                    group = lsp_augroup,
-                    desc = 'LSP: Auto-refresh code lens',
-                })
-            end
+        if client and client:supports_method('textDocument/codeLens') then
+            keymap('n', '<leader>cl', vim.lsp.codelens.run, opts('LSP: Run code lens'))
+            keymap('n', '<leader>cL', vim.lsp.codelens.refresh, opts('LSP: Refresh code lens'))
         end
 
         -- ===================================================================
         -- LSP: Inlay Hints (Neovim 0.10+)
         -- ===================================================================
-        if vim.lsp.inlay_hint and client and client.supports_method('textDocument/inlayHint') then
+        if client and client:supports_method('textDocument/inlayHint') then
             keymap('n', '<leader>ih', function()
                 vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr }), { bufnr = bufnr })
             end, opts('LSP: Toggle inlay hints'))
@@ -83,7 +72,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         -- ===================================================================
         -- LSP: Document Highlighting
         -- ===================================================================
-        if client and client.supports_method('textDocument/documentHighlight') then
+        if client and client:supports_method('textDocument/documentHighlight') then
             local highlight_augroup = vim.api.nvim_create_augroup('LspDocumentHighlight', { clear = false })
 
             vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
@@ -113,20 +102,16 @@ vim.api.nvim_create_autocmd("LspAttach", {
         -- ===================================================================
         -- LSP: Type Hierarchy (Neovim 0.11+)
         -- ===================================================================
-        if vim.lsp.buf.typehierarchy and client and client.supports_method('textDocument/prepareTypeHierarchy') then
+        if vim.lsp.buf.typehierarchy and client and client:supports_method('textDocument/prepareTypeHierarchy') then
             keymap('n', '<leader>th', vim.lsp.buf.typehierarchy, opts('LSP: Type hierarchy'))
         end
 
         -- ===================================================================
         -- LSP: Call Hierarchy
         -- ===================================================================
-        if client and client.supports_method('textDocument/prepareCallHierarchy') then
-            if vim.lsp.buf.incoming_calls then
-                keymap('n', '<leader>ci', vim.lsp.buf.incoming_calls, opts('LSP: Incoming calls'))
-            end
-            if vim.lsp.buf.outgoing_calls then
-                keymap('n', '<leader>co', vim.lsp.buf.outgoing_calls, opts('LSP: Outgoing calls'))
-            end
+        if client and client:supports_method('textDocument/prepareCallHierarchy') then
+            keymap('n', '<leader>ci', vim.lsp.buf.incoming_calls, opts('LSP: Incoming calls'))
+            keymap('n', '<leader>co', vim.lsp.buf.outgoing_calls, opts('LSP: Outgoing calls'))
         end
     end,
 })
@@ -212,16 +197,16 @@ local diagnostics_active = true
 keymap('n', '<leader>td', function()
     diagnostics_active = not diagnostics_active
     if diagnostics_active then
-        vim.diagnostic.enable()
+        vim.diagnostic.enable(true)
         print("Diagnostics enabled")
     else
-        vim.diagnostic.disable()
+        vim.diagnostic.enable(false)
         print("Diagnostics disabled")
     end
 end, opts('Diagnostic: Toggle diagnostics'))
 
 -- =======================================================================
--- INDENTATION EXCEPTIONS (vim-sleuth handles existing files)
+-- INDENTATION EXCEPTIONS
 -- =======================================================================
 local indent_augroup = vim.api.nvim_create_augroup("IndentExceptions", { clear = true })
 
@@ -339,3 +324,4 @@ vim.api.nvim_create_autocmd({ "TextChanged", "InsertLeave", "FocusLost", "BufLea
     end,
     desc = "Debounced autosave on changes or leaving mode",
 })
+

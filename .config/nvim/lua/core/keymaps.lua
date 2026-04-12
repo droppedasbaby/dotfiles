@@ -25,24 +25,19 @@ keymap("n", "<leader>sw", function()
     local name = vim.fn.input("Session name: ")
     if name ~= "" then require("mini.sessions").write(name) end
 end, { desc = "Write session" })
+keymap("n", "<leader>sd", function()
+    local sessions = require("mini.sessions")
+    local name = vim.fn.getcwd():gsub("[/\\]", " | "):gsub("^ | ", "")
+    if sessions.detected[name] then
+        sessions.delete(name, { force = true })
+    end
+    vim.cmd("%bdelete!")
+    require("mini.starter").open()
+    print("Session wiped - fresh start")
+end, { desc = "Wipe session and start fresh" })
 
 -- mini.extra
 keymap("n", "<leader>jl", function() require("mini.extra").pickers.list({ scope = 'jump' }) end, { desc = "Jump List Picker" })
-keymap("n", "<leader>ft", function() require("mini.extra").pickers.hipatterns() end, { desc = "Find TODOs/FIXMEs (buffer)" })
-keymap("n", "<leader>fT", function() require("mini.extra").pickers.hipatterns({ scope = "all" }) end, { desc = "Find TODOs/FIXMEs (all buffers)" })
-
--- mini.completion
-keymap("i", "<Tab>", function()
-    return vim.fn.pumvisible() == 1 and "<C-n>" or "<Tab>"
-end, { expr = true, desc = "Next completion item or tab" })
-
-keymap("i", "<S-Tab>", function()
-    return vim.fn.pumvisible() == 1 and "<C-p>" or "<S-Tab>"
-end, { expr = true, desc = "Previous completion item" })
-
-keymap("i", "<CR>", function()
-    return vim.fn.pumvisible() == 1 and "<C-y>" or "<CR>"
-end, { expr = true, desc = "Confirm completion or newline" })
 
 -- Window Management
 keymap("n", "<leader>sv", "<C-w>v", { desc = "Split window vertically" })
