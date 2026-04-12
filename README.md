@@ -21,10 +21,11 @@ System Settings > Keyboard > Keyboard Shortcuts > Modifier Keys
 
 ## Shell utilities
 
-Custom tools loaded from `~/.config/shell/`. **These are in active development, heavily AI-assisted, and experimental** — shell scripting isn't my strong suit so I lean on AI here. They work well for my workflow but may be rough around the edges and will improve over time. The rest of the repo (nvim, tmux, zsh config) is mostly hand-written — AI used mainly for cleanup, formatting, and best practice nudges.
+Custom tools loaded from `~/.config/zsh/`. **These are in active development, heavily AI-assisted, and experimental** — shell scripting isn't my strong suit so I lean on AI here. They work well for my workflow but may be rough around the edges and will improve over time. The rest of the repo (nvim, tmux, zsh config) is mostly hand-written — AI used mainly for cleanup, formatting, and best practice nudges.
 
 | Command | Description |
 |---------|-------------|
+| `block` | Website blocker via `/etc/hosts` with optional timer lock |
 | `cc` | Pick and resume Claude / Codex conversations using fzf |
 | `ds` | Open or attach a tmux session for a project directory (zoxide + fzf) |
 | `wt` | Git worktree manager with per-repo post-create hooks |
