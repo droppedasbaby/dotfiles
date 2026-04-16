@@ -4,10 +4,18 @@
 #   cc            - pick from all conversations across both providers
 #   cc .          - pick from current project only
 #   cc <query>    - pick with fzf query pre-filled
+#   cc --deep     - scan all JSONL files (slow, ~17s first time)
+#
+# In fzf:
+#   ctrl-e        - scan session JSONL files (3 days)
+#   ctrl-r        - scan session JSONL files (7 days)
+#   ctrl-a        - scan session JSONL files (all time -- slow)
+#   ctrl-p        - filter to current project
 #
 # Data sources:
-#   ~/.claude/history.jsonl
-#   ~/.codex/history.jsonl
+#   ~/.claude/history.jsonl        (message history -- always searched)
+#   ~/.codex/history.jsonl         (message history -- always searched)
+#   ~/.claude/projects/**/*.jsonl  (session content -- searched for PR URLs, ticket IDs)
 #
 # Config:
 #   DEV_DIR           Root of your projects — optional, strips prefix from project labels
@@ -27,12 +35,15 @@ _cc_check_deps() {
   fi
 }
 
+zmodload zsh/datetime 2>/dev/null
+
 _cc_format_date() {
-  local epoch="$1"
-  if [[ "$(uname)" == "Darwin" ]]; then
-    date -r "$epoch" "+%b %d"
+  if (( ${+builtins[strftime]} )); then
+    strftime "%b %d" "$1"
+  elif [[ "$(uname)" == "Darwin" ]]; then
+    date -r "$1" "+%b %d"
   else
-    date -d "@$epoch" "+%b %d"
+    date -d "@$1" "+%b %d"
   fi
 }
 
@@ -46,7 +57,7 @@ _cc_collect_claude() {
     .sessionId as $sid |
     .project as $proj |
     (.timestamp / 1000 | floor) as $ts |
-    (.display // "" | gsub("\t"; " ")) as $msg |
+    (.display // "" | gsub("[\\t\\n\\r]"; " ")) as $msg |
     [$sid, ($proj // ""), ($ts | tostring), $msg] | @tsv
   ' "$history_file" \
   | awk -F'\t' '
@@ -54,11 +65,16 @@ _cc_collect_claude() {
       sid = $1; proj = $2; ts = $3 + 0; msg = $4
       if (sid == "" || ts <= 0) next
       if (ts > max_ts[sid]) max_ts[sid] = ts
-      if (msg == "" || substr(msg,1,1) == "<" || substr(msg,1,1) == "{" || substr(msg,1,1) == "/" || substr(msg,1,1) == ":") next
+      if (msg == "" || substr(msg,1,1) == "<" || substr(msg,1,1) == "{" || substr(msg,1,1) == ":") next
+      # Strip slash-command prefix, keep args (e.g. "/flow:fight https://..." -> "fight https://...")
+      if (substr(msg,1,1) == "/") {
+        sub(/^\/[^ ]*[ ]*/, "", msg)
+        if (msg == "") next
+      }
       kw = msg
-      if (length(kw) > 60) kw = substr(kw, 1, 60)
+      if (length(kw) > 100) kw = substr(kw, 1, 100)
       if (sid in all_kw) {
-        if (length(all_kw[sid]) < 300) all_kw[sid] = all_kw[sid] " " kw
+        if (length(all_kw[sid]) < 600) all_kw[sid] = all_kw[sid] " " kw
       } else {
         all_kw[sid] = kw
       }
@@ -87,7 +103,7 @@ _cc_collect_codex() {
     fromjson? // empty |
     .session_id as $sid |
     (.ts | floor) as $ts |
-    (.text // "" | gsub("\t"; " ")) as $msg |
+    (.text // "" | gsub("[\\t\\n\\r]"; " ")) as $msg |
     [$sid, ($ts | tostring), $msg] | @tsv
   ' "$history_file" \
   | awk -F'\t' '
@@ -95,11 +111,15 @@ _cc_collect_codex() {
       sid = $1; ts = $2 + 0; msg = $3
       if (sid == "" || ts <= 0) next
       if (ts > max_ts[sid]) max_ts[sid] = ts
-      if (msg == "" || substr(msg,1,1) == "<" || substr(msg,1,1) == "{" || substr(msg,1,1) == "/" || substr(msg,1,1) == ":") next
+      if (msg == "" || substr(msg,1,1) == "<" || substr(msg,1,1) == "{" || substr(msg,1,1) == ":") next
+      if (substr(msg,1,1) == "/") {
+        sub(/^\/[^ ]*[ ]*/, "", msg)
+        if (msg == "") next
+      }
       kw = msg
-      if (length(kw) > 60) kw = substr(kw, 1, 60)
+      if (length(kw) > 100) kw = substr(kw, 1, 100)
       if (sid in all_kw) {
-        if (length(all_kw[sid]) < 300) all_kw[sid] = all_kw[sid] " " kw
+        if (length(all_kw[sid]) < 600) all_kw[sid] = all_kw[sid] " " kw
       } else {
         all_kw[sid] = kw
       }
@@ -117,9 +137,44 @@ _cc_collect_codex() {
   '
 }
 
+_cc_collect_jsonl_keywords() {
+  local max_days="${1:-3}"
+  local projects_dir="$HOME/.claude/projects"
+  [[ -d "$projects_dir" ]] || return 0
+
+  find "$projects_dir" -name "*.jsonl" -type f -mtime "-${max_days}" -print0 2>/dev/null \
+  | xargs -0 grep -oHE 'github\.com/[^/"]+/[^/"]+/pull/[0-9]+|[A-Z]{2,}-[0-9]{3,}' 2>/dev/null \
+  | awk '{
+      line = $0
+      if (!match(line, /[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+/)) next
+      sid = substr(line, RSTART, RLENGTH)
+      if (!match(line, /\.jsonl:/)) next
+      term = substr(line, RSTART + 7)
+      if (term == "" || (sid SUBSEP term) in seen) next
+      seen[sid SUBSEP term] = 1
+      if (length(kw[sid]) < 500)
+        kw[sid] = (sid in kw) ? kw[sid] " " term : term
+    }
+    END {
+      for (sid in kw) {
+        gsub(/\t/, " ", kw[sid])
+        print sid "\t" kw[sid]
+      }
+    }'
+}
+
 _cc_list_sessions() {
   local scope="$1"
   local max_age="$2"
+  local jsonl_days="${3:-3}"
+
+  # Load supplemental keywords from session JSONL files
+  typeset -A extra_kw
+  if (( jsonl_days > 0 )); then
+    while IFS=$'\t' read -r _sid _kw; do
+      extra_kw[$_sid]="$_kw"
+    done < <(_cc_collect_jsonl_keywords "$jsonl_days")
+  fi
 
   local now
   local provider sid ppath summary label delta date_str
@@ -143,6 +198,11 @@ _cc_list_sessions() {
       (( (now - epoch) > max_age )) && continue
     fi
 
+    # Merge keywords from session JSONL content
+    if [[ -n "${extra_kw[$sid]:-}" ]]; then
+      keywords="$keywords ${extra_kw[$sid]}"
+    fi
+
     if [[ -n "$ppath" ]]; then
       label="$ppath"
       label="${label/#$HOME/~}"
@@ -158,6 +218,7 @@ _cc_list_sessions() {
     elif (( delta < 86400 )); then date_str="$(( delta / 3600 ))h ago"
     elif (( delta < 172800 )); then date_str="yesterday"
     elif (( delta < 604800 )); then date_str="$(( delta / 86400 ))d ago"
+    elif (( ${+builtins[strftime]} )); then strftime -s date_str "%b %d" "$epoch"
     else date_str=$(_cc_format_date "$epoch")
     fi
 
@@ -174,6 +235,7 @@ function cc() {
   local scope="all"
   local max_age=""
   local query=""
+  local jsonl_days=0
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -181,6 +243,7 @@ function cc() {
       --today)    max_age=86400 ;;
       --week)     max_age=604800 ;;
       --month)    max_age=2592000 ;;
+      --deep)     jsonl_days=9999 ;;
       *)          query+="${query:+ }$1" ;;
     esac
     shift
@@ -191,33 +254,52 @@ function cc() {
     return 1
   fi
 
+  # Direct resume by session ID (full or partial UUID)
+  if [[ "$query" =~ ^[0-9a-f]{8}-[0-9a-f]{4} ]]; then
+    local sid="$query"
+    # Find project path from history
+    local ppath
+    ppath=$(grep "$sid" "${CC_CLAUDE_HISTORY_FILE:-$HOME/.claude/history.jsonl}" 2>/dev/null | jq -r '.project // ""' | head -1)
+    if [[ -n "$ppath" && -d "$ppath" ]]; then
+      cd "$ppath" || return 1
+    fi
+    claude -r "$sid"
+    return $?
+  fi
+
+  local cc_src="${CC_SRC:-$HOME/.dotfiles/.config/zsh/cc.zsh}"
+  local cwd
+  cwd=$(pwd)
   local hdr
-  hdr=$(printf '%-11s  %-8s  %-25s  %s' 'age' 'src' 'project' 'summary')
+  hdr=$(printf '%-11s  %-8s  %-25s  %s    [^E 3d | ^R 7d | ^A all | ^P project]' 'age' 'src' 'project' 'summary')
 
   local pick
-  pick=$(_cc_list_sessions "$scope" "$max_age" \
+  pick=$(_cc_list_sessions "$scope" "$max_age" "$jsonl_days" \
     | fzf --height 100% --reverse --prompt="cc: " \
            --tiebreak=index \
            --query="$query" \
            --with-nth=4 \
            --delimiter=$'\t' \
            --header="$hdr" \
-           --preview-window=hidden)
+           --preview-window=hidden \
+           --bind "ctrl-e:reload(zsh -c 'source $cc_src && _cc_list_sessions ${(q)scope} ${(q)max_age} 3')+change-prompt(cc[3d]: )" \
+           --bind "ctrl-r:reload(zsh -c 'source $cc_src && _cc_list_sessions ${(q)scope} ${(q)max_age} 7')+change-prompt(cc[7d]: )" \
+           --bind "ctrl-a:reload(zsh -c 'source $cc_src && _cc_list_sessions ${(q)scope} ${(q)max_age} 9999')+change-prompt(cc[all]: )" \
+           --bind "ctrl-p:reload(zsh -c 'source $cc_src && _cc_list_sessions ${(q)cwd} ${(q)max_age} ${(q)jsonl_days}')+change-prompt(cc[proj]: )")
 
   [[ -z "$pick" ]] && return 0
 
   local provider session_id project_path
-  provider=$(echo "$pick" | cut -f1)
-  session_id=$(echo "$pick" | cut -f2)
-  project_path=$(echo "$pick" | cut -f3)
-
-  if [[ -n "$project_path" && ! -d "$project_path" ]]; then
-    echo "Project directory no longer exists: $project_path"
-    return 1
-  fi
+  provider=$(print -r -- "$pick" | cut -f1)
+  session_id=$(print -r -- "$pick" | cut -f2)
+  project_path=$(print -r -- "$pick" | cut -f3)
 
   if [[ -n "$project_path" ]]; then
-    cd "$project_path" || return 1
+    if [[ -d "$project_path" ]]; then
+      cd "$project_path" || return 1
+    else
+      echo "Warning: project directory no longer exists: $project_path (resuming anyway)"
+    fi
   fi
 
   case "$provider" in

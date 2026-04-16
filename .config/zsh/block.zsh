@@ -4,6 +4,7 @@
 #   block              - block sites (unlockable any time)
 #   block <duration>   - block sites for duration (e.g. 2h, 30m) with timer lock
 #   block off          - unblock (respects timer lock)
+#   block break        - 15 min escape hatch (once per session, after 2h)
 #   block status       - show current state + remaining time
 #
 # Config:
@@ -12,7 +13,7 @@
 # Dependencies: sudo (for /etc/hosts edits)
 
 _block_config="${CONFIGS_DIR:-$DEV_DIR/configs}/block/domains.txt"
-_block_state="$HOME/.local/state/block/lock"
+_block_state_dir="$HOME/.local/state/block"
 _block_hosts="/etc/hosts"
 _block_start="########## BLOCKED:START ##########"
 _block_end="########## BLOCKED:END ##########"
@@ -40,6 +41,28 @@ _block_parse_duration() {
     m) echo $(( val * 60 )) ;;
     *) echo "block: invalid duration '$input' — use e.g. 2h or 30m" >&2; return 1 ;;
   esac
+}
+
+_block_state_read() {
+  local key="$1"
+  local file="$_block_state_dir/state"
+  [[ -f "$file" ]] || return 1
+  grep "^${key}=" "$file" 2>/dev/null | cut -d= -f2
+}
+
+_block_state_write() {
+  mkdir -p "$_block_state_dir"
+  local file="$_block_state_dir/state"
+  local key="$1" val="$2"
+  if [[ -f "$file" ]] && grep -q "^${key}=" "$file" 2>/dev/null; then
+    sed -i '' "s/^${key}=.*/${key}=${val}/" "$file"
+  else
+    echo "${key}=${val}" >> "$file"
+  fi
+}
+
+_block_state_clear() {
+  rm -f "$_block_state_dir/state"
 }
 
 _block_remove() {
@@ -97,15 +120,24 @@ function block() {
         echo "Not blocking."
         return 0
       fi
-      if [[ -f "$_block_state" ]]; then
-        local unlock_at now remain
-        unlock_at=$(<"$_block_state")
-        now=$(date +%s)
-        if (( now < unlock_at )); then
-          remain=$((unlock_at - now))
-          echo "Blocking — $(_block_human_remaining "$remain") remaining."
-        else
-          echo "Blocking — timer expired. Run: block off"
+      local unlock_at started_at break_used
+      unlock_at=$(_block_state_read unlock_at)
+      started_at=$(_block_state_read started_at)
+      break_used=$(_block_state_read break_used)
+      local now=$(date +%s)
+
+      if [[ -n "$unlock_at" ]] && (( now < unlock_at )); then
+        echo "Blocking — $(_block_human_remaining $((unlock_at - now))) remaining."
+      elif [[ -n "$unlock_at" ]]; then
+        echo "Blocking — timer expired. Run: block off"
+      else
+        echo "Blocking indefinitely."
+      fi
+
+      if [[ -n "$started_at" ]]; then
+        local active_for=$(( now - started_at ))
+        if (( active_for >= 7200 )) && [[ "$break_used" != "1" ]]; then
+          echo "Escape hatch available: block break"
         fi
       fi
       ;;
@@ -115,10 +147,9 @@ function block() {
         echo "Not blocking."
         return 0
       fi
-      if [[ -f "$_block_state" ]]; then
-        local unlock_at now
-        unlock_at=$(<"$_block_state")
-        now=$(date +%s)
+      local unlock_at=$(_block_state_read unlock_at)
+      if [[ -n "$unlock_at" ]]; then
+        local now=$(date +%s)
         if (( now < unlock_at )); then
           local remain=$((unlock_at - now))
           echo "Refused — $(_block_human_remaining "$remain") remaining."
@@ -126,14 +157,66 @@ function block() {
         fi
       fi
       _block_remove
-      rm -f "$_block_state"
+      _block_state_clear
       _block_flush_dns
       echo "Unblocked."
       ;;
 
+    break)
+      if ! _block_is_active; then
+        echo "Not blocking."
+        return 0
+      fi
+
+      local break_used=$(_block_state_read break_used)
+      if [[ "$break_used" == "1" ]]; then
+        echo "Refused — break already used this session."
+        return 1
+      fi
+
+      local started_at=$(_block_state_read started_at)
+      if [[ -z "$started_at" ]]; then
+        echo "Refused — no session start time recorded."
+        return 1
+      fi
+
+      local now=$(date +%s)
+      local active_for=$(( now - started_at ))
+      if (( active_for < 7200 )); then
+        local need=$(( 7200 - active_for ))
+        echo "Refused — need 2h of blocking first. $(_block_human_remaining "$need") to go."
+        return 1
+      fi
+
+      _block_state_write break_used 1
+
+      # Build the block entries now so the background process doesn't need to read config
+      local entries=""
+      while IFS= read -r domain || [[ -n "$domain" ]]; do
+        domain="${domain%%\#*}"
+        domain="${domain// /}"
+        [[ -z "$domain" ]] && continue
+        entries+="127.0.0.1 $domain\n::1 $domain\n"
+      done < "$_block_config"
+
+      _block_remove
+      _block_flush_dns
+      echo "Break — 15 minutes. Enjoy it."
+
+      # Re-block after 15 min in a disowned root process
+      sudo bash -c "
+        sleep 900
+        printf '\n\n$_block_start\n${entries}$_block_end\n' >> '$_block_hosts'
+        dscacheutil -flushcache 2>/dev/null
+        killall -HUP mDNSResponder 2>/dev/null
+      " &!
+      ;;
+
     on|"")
       _block_apply || return 1
-      rm -f "$_block_state"
+      _block_state_clear
+      mkdir -p "$_block_state_dir"
+      _block_state_write started_at "$(date +%s)"
       _block_flush_dns
       echo "Blocked."
       ;;
@@ -142,8 +225,10 @@ function block() {
       local seconds
       seconds=$(_block_parse_duration "$cmd") || return 1
       _block_apply || return 1
-      mkdir -p "${_block_state:h}"
-      echo $(( $(date +%s) + seconds )) > "$_block_state"
+      _block_state_clear
+      mkdir -p "$_block_state_dir"
+      _block_state_write started_at "$(date +%s)"
+      _block_state_write unlock_at "$(( $(date +%s) + seconds ))"
       _block_flush_dns
       echo "Blocked for $cmd."
       ;;
