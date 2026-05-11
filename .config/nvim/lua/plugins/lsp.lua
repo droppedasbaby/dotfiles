@@ -9,30 +9,24 @@ return {
     },
     config = function()
         local servers = {
-            -- Essentials
             "lua_ls",
 
-            -- Programming Languages
             "gopls",
             "ts_ls",
             "pyright",
             "ruff",
 
-            -- Shell
             "bashls",
 
-            -- Data & Config
             "jsonls",
             "yamlls",
             "taplo",
             "terraformls",
 
-            -- Docs & Web
             "marksman",
             "html",
             "cssls",
 
-            -- DevOps
             "dockerls",
         }
 
@@ -56,4 +50,4 @@ return {
             },
         })
     end,
-
+}
