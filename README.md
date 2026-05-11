@@ -12,7 +12,7 @@ System Settings > Keyboard > Keyboard Shortcuts > Modifier Keys
 
 ## What's included
 
-- **zsh** — zinit plugins, pyenv, fzf, zoxide
+- **zsh** — zinit plugins, pure prompt, pyenv (lazy), fzf, zoxide, modern aliases (eza, bat, delta)
 - **neovim** — lazy.nvim config with LSP, treesitter, harpoon, flash
 - **tmux** — TPM, tokyo-night theme, vim-tmux-navigator
 - **gh** — GitHub CLI config
@@ -25,10 +25,16 @@ Custom tools loaded from `~/.config/zsh/`. **These are in active development, he
 
 | Command | Description |
 |---------|-------------|
-| `block` | Website blocker via `/etc/hosts` with optional timer lock |
-| `cc` | Pick and resume Claude / Codex conversations using fzf |
+| `block` | Website blocker via `/etc/hosts` with timer lock and escape hatch |
+| `cc` | Pick and resume Claude / Codex conversations using fzf (Python backend for search) |
+| `dev` | Quick dev session launcher — tmux 50/50 split from zoxide + fzf |
 | `ds` | Open or attach a tmux session for a project directory (zoxide + fzf) |
 | `wt` | Git worktree manager with per-repo post-create hooks |
+
+Additional scripts in `~/.config/scripts/`:
+
+| Script | Description |
+|--------|-------------|
 | `sync-repos` | Batch-sync personal repos: fetch, rebase, commit, push with a secret guard |
 
 Each script has a usage header with flags and config vars. See `.secrets.zsh.example` for required environment variables.
