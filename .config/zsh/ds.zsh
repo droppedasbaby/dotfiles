@@ -127,7 +127,7 @@ function ds() {
 
     # Filter the list with fzf
     local -a matches
-    matches=("${(@f)$(echo "$full_list" | fzf --filter="$query" --no-sort 2>/dev/null)}")
+    matches=("${(@f)$(echo "$full_list" | fzf --filter="$query" --tiebreak=index 2>/dev/null)}")
 
     # Remove empty elements
     matches=("${(@)matches:#}")

@@ -176,3 +176,7 @@ fi
   fi
   source "$cache"
 }
+
+# >>> reps path >>>
+export PATH="$PATH:/Users/amrindergrewal/.local/bin/reps"
+# <<< reps path <<<

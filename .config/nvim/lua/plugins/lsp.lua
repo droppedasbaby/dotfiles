@@ -13,13 +13,10 @@ return {
             "lua_ls",
 
             -- Programming Languages
-            "clangd",
             "gopls",
-            "jdtls",
             "ts_ls",
             "pyright",
             "ruff",
-            "rust_analyzer",
 
             -- Shell
             "bashls",
@@ -28,7 +25,6 @@ return {
             "jsonls",
             "yamlls",
             "taplo",
-            "lemminx",
             "terraformls",
 
             -- Docs & Web
@@ -40,30 +36,24 @@ return {
             "dockerls",
         }
 
-
         local capabilities = vim.lsp.protocol.make_client_capabilities()
 
         require("mason-lspconfig").setup({
             ensure_installed = servers,
-            handlers = {
-                -- Default handler for all servers
-                function(server_name)
-                    require("lspconfig")[server_name].setup({
-                        capabilities = capabilities,
-                    })
-                end,
-                -- lua_ls: tell it about neovim's vim global
-                ["lua_ls"] = function()
-                    require("lspconfig").lua_ls.setup({
-                        capabilities = capabilities,
-                        settings = {
-                            Lua = {
-                                diagnostics = { globals = { "vim" } },
-                            },
-                        },
-                    })
-                end,
+            automatic_enable = {
+                exclude = { "lua_ls" },
+            },
+        })
+
+        local lspconfig = require("lspconfig")
+
+        lspconfig.lua_ls.setup({
+            capabilities = capabilities,
+            settings = {
+                Lua = {
+                    diagnostics = { globals = { "vim" } },
+                },
             },
         })
     end,
-}
+

@@ -11,7 +11,9 @@ keymap("i", "jj", "<ESC>", { desc = "Exit insert mode" })
 keymap("n", "<leader>nh", ":nohl<CR>", { desc = "Clear search highlights" })
 
 -- mini.files
-keymap("n", "<leader>e", function() require("mini.files").open() end, { desc = "Open file explorer" })
+keymap("n", "<leader>e", function()
+    require("mini.files").open(vim.api.nvim_buf_get_name(0), false)
+end, { desc = "Open file explorer at current file" })
 
 -- mini.pick
 keymap("n", "<leader>ff", function() require("mini.pick").builtin.files() end, { desc = "Find files" })
@@ -54,6 +56,9 @@ keymap("n", "<leader>l", "<C-w>l", { desc = "Navigate to the split on the right"
 keymap("n", "<leader>bd", function()
     require("mini.bufremove").delete(0, false)
 end, { desc = "Close current buffer" })
+
+keymap("n", "qq", "<cmd>bprevious<CR>", { desc = "Previous buffer" })
+keymap("n", "rr", "<cmd>bnext<CR>", { desc = "Next buffer" })
 
 -- harpoon
 local harpoon = require("harpoon")
