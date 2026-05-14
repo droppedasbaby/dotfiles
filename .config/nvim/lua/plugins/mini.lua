@@ -78,6 +78,11 @@ return {
         require("mini.diff").setup()
         require("mini.git").setup()
 
+        -- Completion: popup-while-typing using LSP. Pyright's autotrigger
+        -- chars are only `.` and `[`, so vim.lsp.completion alone gives no
+        -- popup on identifier prefixes (e.g. typing `db_au`).
+        require("mini.completion").setup()
+
         -- Text editing
         require("mini.pairs").setup()
     end,

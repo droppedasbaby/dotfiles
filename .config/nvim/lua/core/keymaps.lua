@@ -12,8 +12,13 @@ keymap("n", "<leader>nh", ":nohl<CR>", { desc = "Clear search highlights" })
 
 -- mini.files
 keymap("n", "<leader>e", function()
-    require("mini.files").open(vim.api.nvim_buf_get_name(0), false)
-end, { desc = "Open file explorer at current file" })
+    local mf = require("mini.files")
+    if not mf.close() then
+        local buf_name = vim.api.nvim_buf_get_name(0)
+        local path = vim.fn.filereadable(buf_name) == 1 and buf_name or vim.fn.getcwd()
+        mf.open(path, true)
+    end
+end, { desc = "Toggle file explorer at current file" })
 
 -- mini.pick
 keymap("n", "<leader>ff", function() require("mini.pick").builtin.files() end, { desc = "Find files" })

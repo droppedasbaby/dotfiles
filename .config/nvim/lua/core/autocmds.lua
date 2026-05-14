@@ -26,7 +26,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
         keymap('n', '<leader>lk', function() vim.lsp.buf.signature_help({ border = 'rounded' }) end, opts('LSP: Signature help'))
         keymap('i', '<C-k>', function() vim.lsp.buf.signature_help({ border = 'rounded' }) end, opts('LSP: Signature help'))
 
-        vim.lsp.completion.enable(true, args.data.client_id, bufnr, { autotrigger = true })
+        -- mini.completion drives the auto-popup; just register the source here.
+        vim.lsp.completion.enable(true, args.data.client_id, bufnr)
 
         -- ===================================================================
         -- LSP: Code Actions & Refactoring
